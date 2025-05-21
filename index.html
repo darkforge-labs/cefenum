@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>    
+        <title>CefEnum</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .status {
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CefEnum</h1>
+    <p><a href="https://github.com/darkforge-labs/cefenum">https://github.com/darkforge-labs/cefenum</a></p>
+    <div class="status">
+        <p>Status: <span id="connection-status">Connecting...</span></p>
+        <p>Last executed: <span id="last-executed">None</span></p>
+    </div>
+    <script>
+        // Connect to WebSocket server
+        const ws = new WebSocket("ws://" + window.location.host + "/ws");
+        const statusElement = document.getElementById("connection-status");
+        const lastExecutedElement = document.getElementById("last-executed");
+
+        // Connection opened
+        ws.onopen = function() {
+            statusElement.textContent = "Connected";
+            statusElement.style.color = "green";
+            detectCefSharp();
+        };
+
+        // Connection closed
+        ws.onclose = function() {
+            statusElement.textContent = "Disconnected";
+            statusElement.style.color = "red";
+        };
+
+        // Listen for messages from the server
+        ws.onmessage = function(event) {
+            const jsCode = event.data;
+            lastExecutedElement.textContent = jsCode;
+
+            
+            try {
+                // Execute the received JavaScript
+                eval(jsCode);
+            } catch (error) {
+                console.error("Error executing JavaScript:", error);
+            }
+        };
+
+        // Handle errors
+        ws.onerror = function(error) {
+            console.error("WebSocket Error:", error);
+            statusElement.textContent = "Error";
+            statusElement.style.color = "red";
+        };
+
+        
+    </script>
+
+    <html>
+
+
+<h1>CefSharp Object Explorer</h1>
+<p>This tool attempts to detect and explore CefSharp objects that might be exposed to the browser.</p>
+
+<div>
+    <button onclick="detectCefSharp()">Detect CefSharp</button>
+    <button onclick="bindCommon()">Fuzz Object Names</button>
+    <button onclick="bruteForce()">BruteForce Object Names</button>
+</div>
+
+<div>
+    <input type="text" id="object-name" placeholder="Enter object name">
+    <button onclick="bind(document.getElementById('object-name').value)">Bind/Inspect CEF Object</button>
+</div>  
+<div>
+    <textarea id="js-code" placeholder="Interact with discovered object window.objectName.Method('param');"></textarea>
+    <button onclick="eval(document.getElementById('js-code').value)">Execute JavaScript</button>
+</div>
+
+<div id="results">
+    <p>Results will appear here...</p>
+</div>
+
+<script>
+    // Common CefSharp object names and patterns to try
+    var commonObjectNames = [];
+    var commonSuffix = ["Api", "Object", "Class"];
+
+
+    async function bindCommon() {
+    output(`🔍 Scanning for common CefSharp objects...`);
+    // First try the original common names
+    for (const name of commonObjectNames) {
+        try {
+            const obj = await CefSharp.BindObjectAsync(name);
+            if (CefSharp.IsObjectCached(name)) {
+                output(`✅ Successfully bound object: ${name}`);
+                    for (let prop in window[name]) {
+                output(`  - ${prop}: ${typeof window[name][prop]}`);
+              }
+            } else {
+               //placeholder for failed binding
+
+            }
+        } catch (e) {
+
+        }
+    }
+    
+    // Now try with each suffix appended
+    for (const name of commonObjectNames) {
+        for (const suffix of commonSuffix) {
+            const nameWithSuffix = name + suffix;
+            try {
+                const obj = await CefSharp.BindObjectAsync(nameWithSuffix);
+                if (CefSharp.IsObjectCached(nameWithSuffix)) {
+                    output(`✅ Successfully bound object: ${nameWithSuffix}`);
+                } else {
+                   //placeholder for failed binding
+                }
+            } catch (e) {
+                
+            }
+        }
+    }
+    output('✅ Finished Scan.');
+}
+
+    async function bind(name) {
+
+            try {
+                const obj = await CefSharp.BindObjectAsync(name);
+                if (CefSharp.IsObjectCached(name)) {
+                    output(`✅ Successfully bound object: ${name}`);
+                    for (let prop in window[name]) {
+                output(`  - ${prop}: ${typeof window[name][prop]}`);
+              }
+                } else {
+                   //placeholder for failed binding
+                   output('❌ Could not bind object: ' + name);
+                }
+            } catch (e) {
+
+            }
+        
+    }
+
+    // like bindCommon but instead brute force first 5 characters a-z.
+    async function bruteForce() {
+        const maxLength = 5;
+        const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        let foundObjects = [];
+
+        for (let length = 1; length <= maxLength; length++) {
+            output(`Brute forcing length: ${length}`);
+            for (let i = 0; i < Math.pow(alphabet.length, length); i++) {
+                let name = '';
+                let temp = i;
+
+                for (let j = 0; j < length; j++) {
+                    name += alphabet[temp % alphabet.length];
+                    temp = Math.floor(temp / alphabet.length);
+                }
+
+                try {
+                    const obj = await CefSharp.BindObjectAsync(name);
+                    if (CefSharp.IsObjectCached(name)) {
+                        foundObjects.push(name);
+                        output(`✅ Successfully bound object: ${name}`);
+                    }
+                } catch (e) {
+                    // Ignore errors
+                }
+            }
+        }
+
+        if (foundObjects.length === 0) {
+            output('❌ No objects found');
+        }
+    }
+    
+
+    // Utility function to output results
+    function output(message, isSuccess = true) {
+        ws.send(message);
+        console.log(message);
+        const resultsDiv = document.getElementById('results');
+        const className = isSuccess ? 'success' : 'failure';
+        resultsDiv.innerHTML += `<div class="${className}">${message}</div>`;
+    }
+
+    // Function to detect if CefSharp is being used
+    function detectCefSharp() {
+        document.getElementById('results').innerHTML = '<h2>CefEnum Results:</h2>';
+
+        // Check for cefsharp
+        if (typeof CefSharp !== 'undefined') {
+            output('✅ CefSharp object found in global scope');
+            if (typeof CefSharp.BindObjectAsync === 'function') {
+                output('✅ CefSharp.BindObjectAsync function found');
+            }
+        } else {
+            output('❌ CefSharp object not found in global scope', false);
+        }
+
+
+    }
+
+</script>
+
+</body>
+</html>
