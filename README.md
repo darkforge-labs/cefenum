@@ -1,7 +1,7 @@
 # CefEnum
 
 ## About
-CefEnum is a tool designed to detect and enumerate CEFSharp-based thick-clients, identifying .NET objects exposed to JavaScript for potential security research and red teaming. It helps security researchers and penetration testers quickly fingerprint CEFSharp instances and discover exploitable object bindings in .NET-based applications.
+CefEnum is a tool designed to detect and enumerate CEFSharp based thick-clients, identifying .NET objects exposed to JavaScript for potential security research and red teaming. It helps security researchers and penetration testers quickly fingerprint CEFSharp instances and discover exploitable object bindings in .NET-based applications.
 For a comprehensive breakdown of CefEnum's capabilities, usage scenarios, and attack vectors, please visit our detailed blog post: [CEFSharp Enumeration Methods With CefEnum.](https://blog.darkforge.io/cef/cefsharp/cefenum/thick-client/.net/2025/04/21/CefSharp-Enumeration-With-CefEnum.html)
 
 ## Installation
